@@ -1,0 +1,7 @@
+# Helm packaged charts
+helm/*.tgz
+
+# OS / editor
+.DS_Store
+.vscode/
+*.swp
