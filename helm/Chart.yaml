@@ -1,0 +1,6 @@
+apiVersion: v2
+name: sample-webapp
+description: Sample web app chart used by the azure-devops-pipeline-templates pipeline
+type: application
+version: 1.0.0
+appVersion: "1.0"

@@ -1,0 +1,19 @@
+sample-webapp {{ .Chart.AppVersion }} deployed as release {{ .Release.Name }}.
+
+{{- if .Values.ingress.enabled }}
+Get the application URL by running:
+
+  {{- range .Values.ingress.hosts }}
+  https://{{ .host }}/
+  {{- end }}
+
+  {{- if .Values.ingress.tls.enabled }}
+  (TLS enabled via secret {{ .Values.ingress.tls.secretName }})
+  {{- end }}
+{{- else }}
+The app is ClusterIP-only. Port-forward to reach it:
+
+  kubectl port-forward svc/{{ include "sample-webapp.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.targetPort }} -n {{ .Release.Namespace }}
+{{- end }}
+
+Image: {{ .Values.image.repository }}:{{ .Values.image.tag }}

@@ -1,0 +1,57 @@
+# Default values for sample-webapp.
+# Environment overlays: values-dev.yaml, values-prod.yaml
+
+image:
+  repository: myacr.azurecr.io/sample-webapp   # <-- replace: <your-acr>.azurecr.io/<repo>
+  tag: "latest"                                # overridden per deploy via --set image.tag=$(Build.BuildId)
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+containerPort: 8080
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: true
+  className: "nginx"                  # <-- your ingress class: nginx | azure/application-gateway | ...
+  hosts:
+    - host: sample-webapp.example.com   # <-- replace
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    enabled: true
+    secretName: sample-webapp-tls     # pre-create via cert-manager or kubectl create secret tls
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# Dynatrace OneAgent deep monitoring.
+# Requires the Dynatrace Operator (or OneAgent webhook) installed in the cluster.
+# When enabled, pods get the dynatrace.com/inject annotation for automatic injection.
+dynatrace:
+  enabled: false
+  injectAnnotation: "true"
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

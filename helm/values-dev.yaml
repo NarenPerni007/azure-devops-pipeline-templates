@@ -1,0 +1,17 @@
+# Dev environment overrides.
+replicaCount: 1
+
+autoscaling:
+  enabled: false
+
+podDisruptionBudget:
+  enabled: false
+
+ingress:
+  hosts:
+    - host: sample-webapp-dev.example.com   # <-- replace
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    enabled: false
