@@ -1,0 +1,54 @@
+# templates/dynatrace-event.yml
+# Reusable: posts a CUSTOM_DEPLOYMENT event to Dynatrace (Events API v2) after a deploy,
+# so releases show up on the Dynatrace timeline with version + environment context.
+#
+# The API token needs the `events.ingest` scope. Pass it as '$(DynatraceApiToken)'
+# from a secret variable group — it is mapped into an env var below and never
+# echoed, and Azure DevOps masks secret variables in logs automatically.
+
+parameters:
+  - name: dynatraceUrl
+    type: string
+    displayName: 'Dynatrace environment URL, e.g. https://abc123.live.dynatrace.com'
+  - name: apiToken
+    type: string
+    displayName: "Dynatrace API token — pass as '$(DynatraceApiToken)' (secret)"
+  - name: deploymentName
+    type: string
+    displayName: 'Deployment / service name'
+  - name: version
+    type: string
+    displayName: 'Deployed version (e.g. image tag / Build.BuildId)'
+  - name: environment
+    type: string
+    default: ''
+    displayName: 'Environment label for the event custom properties'
+
+steps:
+  - script: |
+      set -euo pipefail
+      BODY=$(cat <<'EOF'
+      {
+        "eventType": "CUSTOM_DEPLOYMENT",
+        "source": "Azure DevOps",
+        "deploymentName": "${{ parameters.deploymentName }}",
+        "deploymentVersion": "${{ parameters.version }}",
+        "deploymentProject": "${{ parameters.deploymentName }}",
+        "ciBackLink": "$(System.TeamFoundationCollectionUri)$(System.TeamProject)/_build/results?buildId=$(Build.BuildId)",
+        "customProperties": {
+          "environment": "${{ parameters.environment }}",
+          "pipeline": "$(Build.DefinitionName)",
+          "branch": "$(Build.SourceBranchName)"
+        }
+      }
+      EOF
+      )
+      curl --fail -sS -X POST "${{ parameters.dynatraceUrl }}/api/v2/events/ingest" \
+        -H "Authorization: Api-Token $DYNATRACE_API_TOKEN" \
+        -H "Content-Type: application/json" \
+        -H "Accept: application/json" \
+        -d "$BODY"
+      echo "Dynatrace deployment event posted: ${{ parameters.deploymentName }} version ${{ parameters.version }} (${{ parameters.environment }})"
+    displayName: 'Post Dynatrace deployment event'
+    env:
+      DYNATRACE_API_TOKEN: ${{ parameters.apiToken }}

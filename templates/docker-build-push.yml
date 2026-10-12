@@ -1,0 +1,59 @@
+# templates/docker-build-push.yml
+# Reusable: Docker BuildKit build -> Trivy vulnerability scan (HIGH/CRITICAL gate) -> optional push to ACR.
+# The scan runs BEFORE any push, so a vulnerable image never reaches the registry.
+
+parameters:
+  - name: acrName
+    type: string
+    displayName: 'ACR name (without .azurecr.io)'
+  - name: imageName
+    type: string
+    displayName: 'Image repository name'
+  - name: tag
+    type: string
+    displayName: 'Image tag'
+  - name: serviceConnection
+    type: string
+    displayName: 'Docker registry service connection (backed by ACR)'
+  - name: dockerfilePath
+    type: string
+    default: 'docker/Dockerfile'
+  - name: buildContext
+    type: string
+    default: 'docker'
+  - name: push
+    type: boolean
+    default: true
+    displayName: 'Push the image after a clean scan (false = build + scan only, e.g. for PRs)'
+
+steps:
+  - task: Docker@2
+    displayName: 'Login to ACR'
+    inputs:
+      command: login
+      containerRegistry: ${{ parameters.serviceConnection }}
+
+  - script: |
+      set -euo pipefail
+      export DOCKER_BUILDKIT=1
+      IMAGE="${{ parameters.acrName }}.azurecr.io/${{ parameters.imageName }}:${{ parameters.tag }}"
+      docker build -f "${{ parameters.dockerfilePath }}" -t "$IMAGE" "${{ parameters.buildContext }}"
+      echo "##vso[task.setvariable variable=builtImage]$IMAGE"
+    displayName: 'Docker build (BuildKit)'
+
+  - script: |
+      set -euo pipefail
+      curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+        | sh -s -- -b "$(Agent.TempDirectory)/bin"
+      export PATH="$(Agent.TempDirectory)/bin:$PATH"
+      trivy image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed "$(builtImage)"
+    displayName: 'Trivy scan (fail on HIGH/CRITICAL)'
+
+  - ${{ if eq(parameters.push, true) }}:
+    - task: Docker@2
+      displayName: 'Push image to ACR'
+      inputs:
+        command: push
+        containerRegistry: ${{ parameters.serviceConnection }}
+        repository: ${{ parameters.imageName }}
+        tags: ${{ parameters.tag }}

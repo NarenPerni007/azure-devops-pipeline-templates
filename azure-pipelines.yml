@@ -1,0 +1,126 @@
+# azure-pipelines.yml
+# Multi-stage pipeline: Build -> Push -> Deploy-Dev -> Deploy-Prod (prod approval-gated).
+# Reusable step templates live in templates/. Wire-up guide: README.md, variables: docs/variables.md
+
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    exclude:
+      - README.md
+      - docs/*
+
+pr:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  # Variable groups (create once per app — see docs/variables.md):
+  - group: sample-webapp-common    # acrName, azureSubscription, aksResourceGroup, aksClusterName,
+                                   # dynatraceUrl, devNamespace, prodNamespace
+  - group: sample-webapp-secrets   # DynatraceApiToken (secret)
+  - name: imageName
+    value: 'sample-webapp'
+  - name: imageTag
+    value: '$(Build.BuildId)'
+  # Service connections (Project Settings > Service connections — see docs/variables.md):
+  - name: acrServiceConnection
+    value: 'acr-docker-sc'         # <-- replace: Docker registry service connection backed by your ACR
+
+stages:
+  - stage: Build
+    displayName: 'Build + scan'
+    jobs:
+      - job: BuildAndScan
+        displayName: 'Docker build & Trivy scan'
+        steps:
+          - template: templates/docker-build-push.yml
+            parameters:
+              acrName: '$(acrName)'
+              imageName: '$(imageName)'
+              tag: '$(imageTag)'
+              serviceConnection: '$(acrServiceConnection)'
+              push: false
+
+  - stage: Push
+    displayName: 'Push to ACR'
+    dependsOn: Build
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+    jobs:
+      - job: PushImage
+        displayName: 'Push image to ACR'
+        steps:
+          - template: templates/docker-build-push.yml
+            parameters:
+              acrName: '$(acrName)'
+              imageName: '$(imageName)'
+              tag: '$(imageTag)'
+              serviceConnection: '$(acrServiceConnection)'
+              push: true
+
+  - stage: Deploy_Dev
+    displayName: 'Deploy to dev'
+    dependsOn: Push
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+    jobs:
+      - deployment: DeployDev
+        displayName: 'Helm deploy (dev)'
+        environment: 'sample-webapp-dev'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - template: templates/helm-deploy.yml
+                  parameters:
+                    aksServiceConnection: '$(azureSubscription)'
+                    aksResourceGroup: '$(aksResourceGroup)'
+                    aksClusterName: '$(aksClusterName)'
+                    namespace: '$(devNamespace)'
+                    chartPath: 'helm'
+                    releaseName: 'sample-webapp'
+                    valueFile: 'helm/values-dev.yaml'
+                    extraSetArgs: '--set image.tag=$(imageTag)'
+                - template: templates/dynatrace-event.yml
+                  parameters:
+                    dynatraceUrl: '$(dynatraceUrl)'
+                    apiToken: '$(DynatraceApiToken)'
+                    deploymentName: 'sample-webapp'
+                    version: '$(imageTag)'
+                    environment: 'dev'
+
+  - stage: Deploy_Prod
+    displayName: 'Deploy to prod'
+    dependsOn: Deploy_Dev
+    condition: succeeded()
+    jobs:
+      - deployment: DeployProd
+        displayName: 'Helm deploy (prod)'
+        # Gate this with a manual approval: Pipelines > Environments > sample-webapp-prod
+        # > Approvals and checks > Approvals. See README.md.
+        environment: 'sample-webapp-prod'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - template: templates/helm-deploy.yml
+                  parameters:
+                    aksServiceConnection: '$(azureSubscription)'
+                    aksResourceGroup: '$(aksResourceGroup)'
+                    aksClusterName: '$(aksClusterName)'
+                    namespace: '$(prodNamespace)'
+                    chartPath: 'helm'
+                    releaseName: 'sample-webapp'
+                    valueFile: 'helm/values-prod.yaml'
+                    extraSetArgs: '--set image.tag=$(imageTag)'
+                - template: templates/dynatrace-event.yml
+                  parameters:
+                    dynatraceUrl: '$(dynatraceUrl)'
+                    apiToken: '$(DynatraceApiToken)'
+                    deploymentName: 'sample-webapp'
+                    version: '$(imageTag)'
+                    environment: 'prod'

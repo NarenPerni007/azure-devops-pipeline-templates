@@ -1,0 +1,47 @@
+# templates/helm-deploy.yml
+# Reusable: Helm upgrade --install --atomic of a chart onto AKS,
+# authenticated via an Azure Resource Manager service connection.
+
+parameters:
+  - name: aksServiceConnection
+    type: string
+    displayName: 'ARM service connection for the subscription hosting the AKS cluster'
+  - name: aksResourceGroup
+    type: string
+    displayName: 'Resource group of the AKS cluster'
+  - name: aksClusterName
+    type: string
+    displayName: 'AKS cluster name'
+  - name: namespace
+    type: string
+    displayName: 'Kubernetes namespace (created if missing)'
+  - name: chartPath
+    type: string
+    displayName: 'Path to the Helm chart directory'
+  - name: releaseName
+    type: string
+    displayName: 'Helm release name'
+  - name: valueFile
+    type: string
+    default: ''
+    displayName: 'Environment-specific values file (optional)'
+  - name: extraSetArgs
+    type: string
+    default: ''
+    displayName: "Extra '--set' args, e.g. '--set image.tag=$(Build.BuildId)'"
+
+steps:
+  - task: HelmDeploy@1
+    displayName: 'Helm upgrade ${{ parameters.releaseName }} -> ${{ parameters.namespace }}'
+    inputs:
+      connectionType: 'Azure Resource Manager'
+      azureSubscription: ${{ parameters.aksServiceConnection }}
+      azureResourceGroup: ${{ parameters.aksResourceGroup }}
+      kubernetesCluster: ${{ parameters.aksClusterName }}
+      namespace: ${{ parameters.namespace }}
+      command: 'upgrade'
+      chartType: 'FilePath'
+      chartPath: ${{ parameters.chartPath }}
+      releaseName: ${{ parameters.releaseName }}
+      valueFile: ${{ parameters.valueFile }}
+      arguments: '--install --atomic --timeout 5m --create-namespace ${{ parameters.extraSetArgs }}'
