@@ -28,7 +28,7 @@ Project Settings > Service connections), then point the pipeline at them.
 
 | Name (example) | Type | Used by |
 |---|---|---|
-| `acr-docker-sc` | **Docker Registry** (backed by ACR) | `templates/docker-build-push.yml` — login + push |
-| `My Azure subscription` | **Azure Resource Manager** (service principal) | `templates/helm-deploy.yml` — AKS cluster access for `HelmDeploy@1` |
+| `acr-docker-sc` | **Docker Registry** (backed by ACR) | `templates/docker-build-push.yml` - login + push |
+| `My Azure subscription` | **Azure Resource Manager** (service principal) | `templates/helm-deploy.yml` - AKS cluster access for `HelmDeploy@1` |
 
-Both are referenced by **name** in the pipeline — no credentials live in the repo.
+Both are referenced by **name** in the pipeline - no credentials live in the repo.

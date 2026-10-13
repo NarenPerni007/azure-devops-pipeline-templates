@@ -20,7 +20,7 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  # Variable groups (create once per app — see docs/variables.md):
+  # Variable groups (create once per app - see docs/variables.md):
   - group: sample-webapp-common    # acrName, azureSubscription, aksResourceGroup, aksClusterName,
                                    # dynatraceUrl, devNamespace, prodNamespace
   - group: sample-webapp-secrets   # DynatraceApiToken (secret)
@@ -28,7 +28,7 @@ variables:
     value: 'sample-webapp'
   - name: imageTag
     value: '$(Build.BuildId)'
-  # Service connections (Project Settings > Service connections — see docs/variables.md):
+  # Service connections (Project Settings > Service connections - see docs/variables.md):
   - name: acrServiceConnection
     value: 'acr-docker-sc'         # <-- replace: Docker registry service connection backed by your ACR
 

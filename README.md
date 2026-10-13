@@ -1,8 +1,8 @@
-# Azure DevOps Pipeline Templates — ACR → Helm → AKS
+# Azure DevOps Pipeline Templates - ACR → Helm → AKS
 
 Reusable Azure DevOps YAML pipelines: build a Docker image, gate it on a Trivy
 vulnerability scan, push it to Azure Container Registry, then deploy it with Helm
-to AKS across dev and prod — with a manual approval gate on prod and a Dynatrace
+to AKS across dev and prod - with a manual approval gate on prod and a Dynatrace
 deployment event posted after every release.
 
 ## Pipeline flow
@@ -21,7 +21,7 @@ PR ────────┘         │
               [Deploy-Prod]   Helm upgrade → prod namespace → Dynatrace deployment event
 ```
 
-- **PRs** run Build only (build + scan, no push) — fast feedback, nothing published.
+- **PRs** run Build only (build + scan, no push) - fast feedback, nothing published.
 - **Prod deploys are approval-gated** via an Azure DevOps environment check, not pipeline YAML.
 
 ## Repository layout
@@ -59,14 +59,14 @@ docs/
 2. **Create the variable groups and service connections** per `docs/variables.md`, then update the
    `variables:` block and the `acrServiceConnection` value in `azure-pipelines.yml`.
 3. **Create the environments** `sample-webapp-dev` and `sample-webapp-prod`
-   (Pipelines > Environments), then add a manual **Approvals** check on the prod environment —
+   (Pipelines > Environments), then add a manual **Approvals** check on the prod environment-
    that is what gates `Deploy_Prod`. Rename the environments per app and update the pipeline.
 
 ## Dynatrace setup
 
 1. **OneAgent (deep monitoring, optional):** install the Dynatrace Operator in the AKS cluster
    (see Dynatrace Hub: "Dynatrace Operator"). Then set `dynatrace.enabled: true` in your values
-   file — pods get the `dynatrace.com/inject` annotation for automatic OneAgent injection.
+   file - pods get the `dynatrace.com/inject` annotation for automatic OneAgent injection.
 2. **Deployment events (included):** create an API token at
    Settings > Integration > Dynatrace API with the **`events.ingest`** scope, store it as the
    `DynatraceApiToken` secret variable, and set `dynatraceUrl` in the common variable group.
@@ -80,7 +80,7 @@ docs/
 - HPA (2–6 replicas, 70% CPU target); static `replicas` omitted when autoscaling is on
 - Ingress with `ingressClassName` parameter and a TLS block
 - Resource requests/limits on all containers
-- Trivy image scan gates the push — HIGH/CRITICAL vulnerabilities fail the build
+- Trivy image scan gates the push - HIGH/CRITICAL vulnerabilities fail the build
 - `--atomic` Helm upgrades (automatic rollback on failure) with `--create-namespace`
 - Non-root sample container (`nginx-unprivileged`)
-- Secrets stay in Azure DevOps variable groups / service connections — nothing in the repo
+- Secrets stay in Azure DevOps variable groups / service connections - nothing in the repo

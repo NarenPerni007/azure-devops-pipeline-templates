@@ -3,7 +3,7 @@
 # so releases show up on the Dynatrace timeline with version + environment context.
 #
 # The API token needs the `events.ingest` scope. Pass it as '$(DynatraceApiToken)'
-# from a secret variable group — it is mapped into an env var below and never
+# from a secret variable group - it is mapped into an env var below and never
 # echoed, and Azure DevOps masks secret variables in logs automatically.
 
 parameters:
@@ -12,7 +12,7 @@ parameters:
     displayName: 'Dynatrace environment URL, e.g. https://abc123.live.dynatrace.com'
   - name: apiToken
     type: string
-    displayName: "Dynatrace API token — pass as '$(DynatraceApiToken)' (secret)"
+    displayName: "Dynatrace API token - pass as '$(DynatraceApiToken)' (secret)"
   - name: deploymentName
     type: string
     displayName: 'Deployment / service name'
