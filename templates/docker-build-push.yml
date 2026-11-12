@@ -25,6 +25,10 @@ parameters:
     type: boolean
     default: true
     displayName: 'Push the image after a clean scan (false = build + scan only, e.g. for PRs)'
+  - name: trivyVersion
+    type: string
+    default: '0.58.2'
+    displayName: 'Trivy version to install (pinned, bump deliberately after checking the release notes)'
 
 steps:
   - task: Docker@2
@@ -43,9 +47,14 @@ steps:
 
   - script: |
       set -euo pipefail
+      # Pinned on purpose: the version comes from the trivyVersion
+      # parameter, not from whatever is on the main branch today.
+      # Installing from main meant the scan gate could change its
+      # behaviour, or break outright, with no change in this repo.
       curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
-        | sh -s -- -b "$(Agent.TempDirectory)/bin"
+        | sh -s -- -b "$(Agent.TempDirectory)/bin" "v${{ parameters.trivyVersion }}"
       export PATH="$(Agent.TempDirectory)/bin:$PATH"
+      trivy --version
       trivy image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed "$(builtImage)"
     displayName: 'Trivy scan (fail on HIGH/CRITICAL)'
 

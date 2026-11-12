@@ -77,10 +77,10 @@ docs/
 
 - Liveness + readiness probes on every pod
 - PodDisruptionBudget (`minAvailable: 1`) so voluntary disruptions never take the app fully down
-- HPA (2–6 replicas, 70% CPU target); static `replicas` omitted when autoscaling is on
+- HPA (2 to 6 replicas, 70% CPU target); static `replicas` omitted when autoscaling is on
 - Ingress with `ingressClassName` parameter and a TLS block
 - Resource requests/limits on all containers
-- Trivy image scan gates the push - HIGH/CRITICAL vulnerabilities fail the build
+- Trivy image scan gates the push - HIGH/CRITICAL vulnerabilities fail the build. The Trivy version is pinned (`trivyVersion` in `templates/docker-build-push.yml`, currently 0.58.2) so the gate only changes when someone bumps it on purpose
 - `--atomic` Helm upgrades (automatic rollback on failure) with `--create-namespace`
 - Non-root sample container (`nginx-unprivileged`)
 - Secrets stay in Azure DevOps variable groups / service connections - nothing in the repo
